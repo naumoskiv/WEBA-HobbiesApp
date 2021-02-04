@@ -5,6 +5,8 @@
     $login = new Login();
     $user_data = $login->check_login($_SESSION['hobbies_userid']);
 
+    $USER = $user_data;
+
     if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         $profile = new Profile();
         $profile_data = $profile->get_profile($_GET['id']);
@@ -19,29 +21,37 @@
 
     //posting posts
     if($_SERVER['REQUEST_METHOD'] == "POST") {
-        $id = $_SESSION['hobbies_userid'];
-        $post = new Post();
-        $result = $post->create_post($id, $_POST, $_FILES);
 
-        if($result == "") {
-            header("Location: profile.php");
+        if (isset($_POST['first_name'])) {
+            $settings_class = new Settings();
+            $settings_class->save_settings($_POST, $_SESSION['hobbies_userid']);
         }
         else {
-            echo "<div>";
-            echo "The following errors occured:<br><br>";
-            echo $result;
-            echo "</div>";
+            $id = $_SESSION['hobbies_userid'];
+            $post = new Post();
+            $result = $post->create_post($id, $_POST, $_FILES);
+
+            if($result == "") {
+                header("Location: profile.php");
+            }
+            else {
+                echo "<div>";
+                echo "The following errors occured:<br><br>";
+                echo $result;
+                echo "</div>";
+            }
         }
+
     }
 
     //getting posts
     $id = $user_data['userid'];
     $post = new Post();
-    $posts = $post->get_post($id);
+    $posts = $post->get_posts($id);
 
-    //getting friends
+
     $user = new User();
-    $friends = $user->get_friends($id);
+    $friends = $user->get_following($user_data['userid'], "user");
 
     $image_class = new Image();
 ?>
@@ -70,6 +80,15 @@
             background-image: url("search.png");
             background-repeat: no-repeat;
             background-position: right;
+        }
+        #textbox{
+            width: 100%;
+            height: 20px;
+            border-radius: 5px;
+            padding: 5px;
+            font-size: 14px;
+            border: solid thin grey;
+            margin: 10px;
         }
         #profile_photo{
             width: 150px;
@@ -112,6 +131,7 @@
             font-size: 14px;
             border-radius: 3px;
             width: 50px;
+            cursor: pointer;
         }
         #post_bar{
             margin-top: 20px;
@@ -141,6 +161,16 @@
                 ?>
 
                 <img src="<?php echo $image; ?>" style="width: 100%">
+
+                <?php
+                    $my_likes = $user_data['likes'];
+                ?>
+
+                <a href="like.php?type=user&id=<?php echo $user_data['userid'] ?>">
+                    <input type="button" id="post_button" value="Follow">
+                </a>
+
+
                 <span>
 
                     <?php
@@ -155,76 +185,62 @@
                         }
                     ?>
                     <img id="profile_photo" src="<?php echo $image; ?>"> <br>
-                    <a href="change_profile_image.php?change=profile" style="text-decoration: none; color: #999999"> Change Profile Image</a> |
-                    <a href="change_profile_image.php?change=cover" style="text-decoration: none; color: #999999"> Change Cover</a>
+                    <?php
+                    if ($user_data['userid'] == $_SESSION['hobbies_userid']) {
+                        echo '<a href="change_profile_image.php?change=profile" style="text-decoration: none; color: #999999"> Change Profile Image </a>';
+                        echo '|';
+                        echo '<a href="change_profile_image.php?change=cover" style="text-decoration: none; color: #999999"> Change Cover</a>';
+                    }
+
+                    ?>
+
 
                 </span>
                 <br>
                 <div style="font-size: 22px"><?php echo $user_data['first_name'] . " " . $user_data['last_name'] ?></div>
+                <div><?php echo $my_likes ?> Followers</div>
                 <br>
                 <a href="index.php"><div id="menu_buttons">Timeline</div></a>
-                <div id="menu_buttons">About</div>
-                <div id="menu_buttons">Hobbies</div>
-                <div id="menu_buttons">Photos</div>
-                <div id="menu_buttons">Settings</div>
-            </div>
+                <a href="profile.php?section=about"><div id="menu_buttons">About</div></a>
+                <a href="profile.php?section=following&id=<?php echo $user_data['userid']?>"><div id="menu_buttons">Following</div></a>
+                <a href="profile.php?section=followers&id=<?php echo $user_data['userid']?>"><div id="menu_buttons">Followers</div></a>
+                <a href="profile.php?section=photos&id=<?php echo $user_data['userid']?>"><div id="menu_buttons">Photos</div></a>
+                <?php
+                    if ($user_data['userid'] == $_SESSION['hobbies_userid']) {
+                        echo '<a href="profile.php?section=settings&id=' . $user_data['userid'] .'"><div id="menu_buttons">Settings</div></a>';
+                    }
 
-            <div style="display: flex">
-                <div style="min-height: 400px; flex: 1">
-                    <div id="hobbies_bar">
-                        Hobbies<br>
-
-                        <?php
-
-                        if ($friends) {
-                            foreach ($friends as $FRIEND_ROW) {
-
-                                include("user.php");
-                            }
-                        }
-
-
-                        ?>
-
-                    </div>
-
-                </div>
-
-
-
-                <div style="min-height: 400px; flex: 2.5; padding: 20px; padding-right: 0">
-                    <div style=" padding: 10px; background-color: white">
-                        <form method="post" enctype="multipart/form-data">
-                            <textarea name="post" placeholder="What's on your mind?"></textarea>
-                            <input type="file" name="file">
-                            <input type="submit" id="post_button" value="Post">
-                            <br>
-                        </form>
-
-                    </div>
-
-                    <div id="post_bar">
-
-                        <?php
-
-                            if ($posts) {
-                                foreach ($posts as $ROW) {
-                                    $user = new User();
-                                    $ROW_USER = $user->get_user($ROW['userid']);
-                                    include("post.php");
-                                }
-                            }
-
-
-                        ?>
-
-
-                    </div>
-
-
-                </div>
+                ?>
 
             </div>
+
+            <?php
+                $section = "default";
+                if (isset($_GET['section'])) {
+                    $section = $_GET['section'];
+                }
+
+                if ($section == "default") {
+                    include("profile_content_default.php");
+                }
+                elseif ($section == "photos"){
+                    include("profile_content_photos.php");
+                }
+                elseif ($section == "followers"){
+                    include("profile_content_followers.php");
+                }
+                elseif ($section == "following"){
+                    include("profile_content_following.php");
+                }
+                elseif ($section == "settings"){
+                    include("profile_content_settings.php");
+                }
+                elseif ($section == "about"){
+                    include("profile_content_about.php");
+                }
+            ?>
+
+
 
         </div>
 

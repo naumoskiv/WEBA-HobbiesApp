@@ -83,7 +83,10 @@
     <body style="font-family: Tahoma,serif; background-color: whitesmoke">
         <div id="bar">
             <div style="font-size: 40px">Hobbies</div>
-            <div id="signup_button">Register</div>
+            <a href="register.php">
+                <div id="signup_button">Register</div>
+            </a>
+
         </div>
 
         <div id="login_form">

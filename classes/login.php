@@ -58,7 +58,7 @@ class Login {
 
     }
 
-    private function hash_text($text) {
+    public function hash_text($text) {
         $text = hash("sha1", $text);
 
         return $text;

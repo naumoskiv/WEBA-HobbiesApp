@@ -46,6 +46,8 @@ class SignUp {
         $gender = $data['gender'];
         $email = $data['email'];
         $password = $data['password'];
+        $password = hash("sha1", $password);
+
 
         //create these
         $userid = $this->create_userid();

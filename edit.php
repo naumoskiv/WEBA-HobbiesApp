@@ -5,6 +5,9 @@
 
     $login = new Login();
     $image_class = new Image();
+    $Post = new Post();
+    $DB = new Database();
+
     $user_data = $login->check_login($_SESSION['hobbies_userid']);
 
     $USER = $user_data;
@@ -17,21 +20,33 @@
         }
     }
 
-    //posting posts
-    if($_SERVER['REQUEST_METHOD'] == "POST") {
-        $id = $_SESSION['hobbies_userid'];
-        $post = new Post();
-        $result = $post->create_post($id, $_POST, $_FILES);
+    $ERROR = "";
+    if (isset($_GET['id'])) {
+        $ROW = $Post->get_one_post($_GET['id']);
 
-        if($result == "") {
-            header("Location: index.php");
+        if (!$ROW) {
+            $ERROR = "No such post was found";
         }
         else {
-            echo "<div>";
-            echo "The following errors occured:<br><br>";
-            echo $result;
-            echo "</div>";
+            if ($ROW['userid'] != $_SESSION['hobbies_userid']) {
+                $ERROR = "Access Denied";
+            }
         }
+    }
+    else {
+        $ERROR = "No such post was found";
+    }
+
+    $_SESSION['return_to'] = "profile.php";
+    if (isset($_SERVER['HTTP_REFERER']) && !strstr($_SERVER['HTTP_REFERER'], "edit.php")) {
+        $_SESSION['return_to'] = $_SERVER['HTTP_REFERER'];
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] == "POST") {
+        $Post->edit_post($_POST, $_FILES);
+
+        header("Location: ". $_SESSION['return_to']);
+        die;
     }
 
 ?>
@@ -40,7 +55,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Hobbies App - Timeline</title>
+        <title>Hobbies App - Delete</title>
     </head>
 
 
@@ -124,74 +139,39 @@
 
     <div id="profile_content" style="width: 800px; margin: auto; min-height: 400px;">
 
-
         <div style="display: flex">
-            <div style="min-height: 400px; flex: 1">
-
-                <div id="me_bar">
-                    <?php
-
-                    $image = "images/user_male.jpg";
-                    if ($user_data['gender'] == "Female") {
-                        $image = "images/user_female.jpg";
-                    }
-                    if (file_exists($user_data['profile_image'])) {
-                        $image = $image_class->get_thumbnail_profile($user_data['profile_image']);
-
-                    }
-                    ?>
-                    <img src="<?php echo $image; ?>" id="profile_photo">
-                    <br>
-                    <a href="profile.php" style="text-decoration: none"><?php echo $user_data['first_name'] . "<br>" . $user_data['last_name']; ?></a>
-                </div>
-
-            </div>
-
-
 
             <div style="min-height: 400px; flex: 2.5; padding: 20px; padding-right: 0">
                 <div style=" padding: 10px; background-color: white">
+                    <h3>Delete Post</h3>
                     <form method="post" enctype="multipart/form-data">
-                        <textarea name="post" placeholder="What's on your mind?"></textarea>
-                        <input type="file" name="file">
-                        <input type="submit" id="post_button" value="Post">
+                            <?php
+                                if ($ERROR != "") {
+                                    echo $ERROR;
+                                }
+                                else {
+                                    echo "Edit Post<br><br>";
+
+                                    echo '<textarea name="post" placeholder="What\'s on your mind?">'. $ROW['post'] .'</textarea>
+                                    <input type="file" name="file">';
+
+                                    echo "<input type='hidden' name='postid' value='$ROW[postid]'>";
+                                    echo "<input type='submit' id='post_button' value='Save'>";
+
+                                    if (file_exists($ROW['image'])) {
+                                        $image_class = new Image();
+                                        $post_image = $image_class->get_thumbnail_post($ROW['image']);
+                                        echo "<br><div style='text-align: center'><img src='$post_image' style='width: 50%'/></div>";
+                                    }
+                                }
+
+                            ?>
                         <br>
+
                     </form>
+
                     <br>
                 </div>
-
-                <div id="post_bar">
-
-                    <?php
-
-                        $DB = new Database();
-                        $user_class = new User();
-                        $followers = $user_class->get_following($_SESSION['hobbies_userid'], "user");
-                        $follower_ids = false;
-
-                        if (is_array($followers)) {
-                            $follower_ids = array_column($followers, "userid");
-                            $follower_ids = implode("','", $follower_ids);
-                        }
-                        if ($follower_ids) {
-                            $myuserid = $_SESSION['hobbies_userid'];
-                            $sql = "select * from posts where parent = 0 and userid = '$myuserid' || userid in('" . $follower_ids . "') order by id desc limit 30 ";
-                            $posts = $DB->read($sql);
-                        }
-
-                        if (isset($posts) && $posts) {
-                            foreach ($posts as $ROW) {
-                                $user = new User();
-                                $ROW_USER = $user->get_user($ROW['userid']);
-                                include("post.php");
-                            }
-                        }
-
-
-                    ?>
-
-                </div>
-
 
             </div>
 

@@ -8,7 +8,6 @@ class Database {
     private $password = "";
     private $db = "hobbies_app_db";
 
-
     function connect() {
         $connection = mysqli_connect($this->host, $this->username, $this->password, $this->db);
         return $connection;

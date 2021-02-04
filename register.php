@@ -92,7 +92,10 @@
     <body style="font-family: Tahoma,serif; background-color: whitesmoke">
     <div id="bar">
         <div style="font-size: 40px">Hobbies</div>
-        <div id="signup_button">Log In</div>
+        <a href="login.php">
+            <div id="signup_button">Log In</div>
+        </a>
+
     </div>
 
     <div id="login_form">

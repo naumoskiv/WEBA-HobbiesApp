@@ -5,7 +5,11 @@
 
     $login = new Login();
     $image_class = new Image();
+    $Post = new Post();
+    $DB = new Database();
+
     $user_data = $login->check_login($_SESSION['hobbies_userid']);
+    $ROW = false;
 
     $USER = $user_data;
 
@@ -17,22 +21,33 @@
         }
     }
 
-    //posting posts
-    if($_SERVER['REQUEST_METHOD'] == "POST") {
-        $id = $_SESSION['hobbies_userid'];
-        $post = new Post();
-        $result = $post->create_post($id, $_POST, $_FILES);
-
-        if($result == "") {
-            header("Location: index.php");
-        }
-        else {
-            echo "<div>";
-            echo "The following errors occured:<br><br>";
-            echo $result;
-            echo "</div>";
-        }
+    $ERROR = "";
+    if (isset($_GET['id'])) {
+        $ROW = $Post->get_one_post($_GET['id']);
     }
+    else {
+        $ERROR = "No post was found";
+    }
+
+    if($_SERVER['REQUEST_METHOD'] == "POST") {
+
+            $id = $_SESSION['hobbies_userid'];
+            $post = new Post();
+            $result = $post->create_post($id, $_POST, $_FILES);
+
+            if($result == "") {
+                header("Location: single_post.php?id=$_GET[id]");
+            }
+            else {
+                echo "<div>";
+                echo "The following errors occurred:<br><br>";
+                echo $result;
+                echo "</div>";
+            }
+
+
+    }
+
 
 ?>
 
@@ -40,7 +55,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Hobbies App - Timeline</title>
+        <title>Hobbies App - Post</title>
     </head>
 
 
@@ -124,74 +139,46 @@
 
     <div id="profile_content" style="width: 800px; margin: auto; min-height: 400px;">
 
-
         <div style="display: flex">
-            <div style="min-height: 400px; flex: 1">
-
-                <div id="me_bar">
-                    <?php
-
-                    $image = "images/user_male.jpg";
-                    if ($user_data['gender'] == "Female") {
-                        $image = "images/user_female.jpg";
-                    }
-                    if (file_exists($user_data['profile_image'])) {
-                        $image = $image_class->get_thumbnail_profile($user_data['profile_image']);
-
-                    }
-                    ?>
-                    <img src="<?php echo $image; ?>" id="profile_photo">
-                    <br>
-                    <a href="profile.php" style="text-decoration: none"><?php echo $user_data['first_name'] . "<br>" . $user_data['last_name']; ?></a>
-                </div>
-
-            </div>
-
-
 
             <div style="min-height: 400px; flex: 2.5; padding: 20px; padding-right: 0">
                 <div style=" padding: 10px; background-color: white">
-                    <form method="post" enctype="multipart/form-data">
-                        <textarea name="post" placeholder="What's on your mind?"></textarea>
-                        <input type="file" name="file">
-                        <input type="submit" id="post_button" value="Post">
-                        <br>
-                    </form>
-                    <br>
-                </div>
-
-                <div id="post_bar">
 
                     <?php
 
-                        $DB = new Database();
-                        $user_class = new User();
-                        $followers = $user_class->get_following($_SESSION['hobbies_userid'], "user");
-                        $follower_ids = false;
+                        $user = new User();
+                        $image_class = new Image();
 
-                        if (is_array($followers)) {
-                            $follower_ids = array_column($followers, "userid");
-                            $follower_ids = implode("','", $follower_ids);
+                        if (is_array($ROW)) {
+                            $ROW_USER = $user->get_user($ROW['userid']);
+                            include("post.php");
                         }
-                        if ($follower_ids) {
-                            $myuserid = $_SESSION['hobbies_userid'];
-                            $sql = "select * from posts where parent = 0 and userid = '$myuserid' || userid in('" . $follower_ids . "') order by id desc limit 30 ";
-                            $posts = $DB->read($sql);
-                        }
+                    ?>
+                    <br style="clear: both">
 
-                        if (isset($posts) && $posts) {
-                            foreach ($posts as $ROW) {
-                                $user = new User();
-                                $ROW_USER = $user->get_user($ROW['userid']);
-                                include("post.php");
+                    <div style=" padding: 10px; background-color: white">
+                        <form method="post" enctype="multipart/form-data">
+                            <textarea name="post" placeholder="Post a comment"></textarea>
+                            <input type="hidden" name="parent" value="<?php echo $ROW['postid'] ?>">
+                            <input type="file" name="file">
+                            <input type="submit" id="post_button" value="Post">
+                            <br>
+                        </form>
+
+                    </div>
+
+                    <?php
+                        $comments = $Post->get_comments($ROW['postid']);
+                        
+                        if (is_array($comments)) {
+                            foreach ($comments as $COMMENT) {
+                                include("comment.php");
                             }
                         }
-
 
                     ?>
 
                 </div>
-
 
             </div>
 
