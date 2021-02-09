@@ -1,6 +1,8 @@
 <div id="post" style="background-color: #EEEEEE; border-radius: 10px">
     <div >
         <?php
+            $user = new User();
+            $ROW_USER = $user->get_user($COMMENT['userid']);
             $image = "images/user_male.jpg";
             if ($ROW_USER['gender'] == "Female") {
                 $image = "images/user_female.jpg";
